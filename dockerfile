@@ -1,26 +1,22 @@
-# /app
-#FROM --platform=linux/amd64 node:19.2-alpine3.16
-FROM --platform=$BUILDPLATFORM node:19.2-alpine3.16
-# cd app
+FROM node:19.2-alpine3.16 as deps
 WORKDIR /app
-
-#Dest ./app
 COPY package.json ./
-
-#Instalar las dependencias
 RUN npm install 
 
-#Dest ./app
+FROM node:19.2-alpine3.16 as builder
+WORKDIR /app
+COPY --from=desp /app/node_modules ./node_modules
 COPY . .
-
-#Raalizar testing
 RUN npm run test
 
-#Eliminar archivos y directorios no necesarios en PROD
-RUN rm -rf tests && rm -rf node_modules
-
-#Instalar las dependencias de pord
+FROM node:19.2-alpine3.16 as prod-deps
+WORKDIR /app
+COPY package.json ./
 RUN npm install --prod
 
-#Comando run de la aplicacion
+FROM node:19.2-alpine3.16 as runner
+WORKDIR /app
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY app.js ./
+COPY tasks/ ./tasks
 CMD [ "node","app.js" ]
